@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>함평 생태갯벌 자료 — 카드 생성/수정/삭제 (자동저장)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#fffef6; --card:#fff; --border:#d7dce3;
+      --accent:#0a66c2; --danger:#dc2626; --muted:#6b7280;
+      --radius:16px; --shadow:0 6px 20px rgba(0,0,0,0.06);
+    }
+    *{box-sizing:border-box}
+    body{ margin:0; padding:24px; font-family:system-ui,-apple-system,"Noto Sans KR",Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:#222; line-height:1.6; }
+    h1{ margin:0 0 6px; } p.lead{ margin:0 0 18px; color:var(--muted) }
+
+    /* 입력 폼 */
+    .form{ max-width:1100px; margin:0 auto 24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; display:grid; gap:12px; }
+    .row{ display:grid; gap:12px; grid-template-columns: 1fr 2fr; }
+    .field{ display:flex; flex-direction:column; gap:8px; } .field label{ font-weight:600 }
+    input[type="file"]{ padding:10px; border:1px dashed #b8c1cc; border-radius:10px; background:#fafbff; }
+    input[type="text"], input[type="url"], textarea{ border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:16px; width:100%; background:#fff; }
+    textarea{ min-height:90px; resize:vertical }
+    .actions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap }
+    .btn{ appearance:none; border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; background:var(--accent); color:#fff; }
+    .btn.secondary{ background:#475569 } .btn.danger{ background:var(--danger) }
+    .hint{ font-size:13px; color:#667085 }
+
+    /* 미리보기 */
+    .preview{ display:grid; grid-template-columns: 360px 1fr; gap:16px; align-items:stretch; background:#f9fafb; border:1px dashed #cbd5e1; border-radius:12px; padding:12px; }
+    .preview .thumb{ background:#f3f4f6; border-radius:12px; aspect-ratio:3/2; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .preview img{ width:100%; height:100%; object-fit:cover; }
+    .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px } .tag{ font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:999px; background:#fff }
+
+    /* 카드 리스트 */
+    .gallery{ max-width:1100px; margin:0 auto; display:grid; gap:18px; }
+    .item{ display:grid; grid-template-columns: 360px 1fr; gap:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+    .item .thumb{ border-radius:12px; overflow:hidden; background:#f3f3f3; aspect-ratio:3/2; display:flex; align-items:center; justify-content:center }
+    .item img{ width:100%; height:100%; object-fit:cover }
+    .item h3{ margin:4px 0 8px; font-size:22px; line-height:1.3 }
+    .item h3 a{ color:#0a66c2; text-decoration:none } .item h3 a:hover{ text-decoration:underline }
+    .item .item-actions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .item .muted{ color:var(--muted); font-size:13px }
+
+    /* 편집 폼(카드 내부) */
+    .edit-form{ display:grid; gap:10px; margin-top:8px; }
+    .edit-form .grid{ display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
+    .edit-form input[type="text"], .edit-form input[type="url"], .edit-form textarea, .edit-form input[type="file"]{ border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:15px; width:100%; background:#fff; }
+    .edit-form textarea{ min-height:80px }
+
+    /* 반응형 */
+    @media (max-width: 960px){
+      .row{ grid-template-columns: 1fr }
+      .preview{ grid-template-columns: 1fr }
+      .item{ grid-template-columns: 1fr }
+      .edit-form .grid{ grid-template-columns: 1fr }
+    }
+  </style>
+</head>
+<body>
+  <h1>함평 생태갯벌 자료 — 카드 생성/수정/삭제 (자동저장)</h1>
+  <p class="lead">추가/수정/삭제 시 자동 저장됩니다. 새로고침해도 그대로 복원돼요.</p>
+
+  <!-- 입력 폼 -->
+  <section class="form" aria-label="자료 입력 폼">
+    <div class="field">
+      <label for="image">이미지 선택</label>
+      <input id="image" type="file" accept="image/*">
+      <span class="hint">* 서버 업로드 없이 브라우저에서만 사용됩니다.</span>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="title">제목</label>
+        <input id="title" type="text" placeholder="예) 저어새 (Black-faced Spoonbill)">
+      </div>
+      <div class="field">
+        <label for="link">제목 링크 (옵션)</label>
+        <input id="link" type="url" placeholder="예) https://ko.wikipedia.org/wiki/저어새">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="desc">설명</label>
+      <textarea id="desc" placeholder="예) 함평만 갯벌에서 관찰되는 대표 철새로, 얕은 갯벌에서 먹이활동을 합니다."></textarea>
+    </div>
+
+    <!-- 실시간 미리보기 -->
+    <div class="preview" aria-label="실시간 미리보기">
+      <div class="thumb" id="previewThumb">
+        <span class="hint">이미지 미리보기</span>
+      </div>
+      <div class="content">
+        <h2 id="previewTitle">제목(링크)</h2>
+        <p class="hint" id="previewMeta">링크를 입력하면 제목이 링크로 표시됩니다.</p>
+        <p id="previewDesc">설명 미리보기</p>
+        <div class="tags">
+          <span class="tag">갯벌</span><span class="tag">함평</span><span class="tag">생태</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn secondary" id="resetBtn" type="button">초기화</button>
+      <button class="btn" id="addBtn" type="button">카드 추가</button>
+    </div>
+  </section>
+
+  <!-- 갤러리 -->
+  <section class="gallery" id="gallery" aria-label="자료 카드 목록"></section>
+
+  <script>
+    const LS_KEY = 'hampyeong_gallery_v1';
+
+    const imageInput = document.getElementById('image');
+    const titleInput = document.getElementById('title');
+    const linkInput  = document.getElementById('link');
+    const descInput  = document.getElementById('desc');
+
+    const previewThumb = document.getElementById('previewThumb');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewMeta  = document.getElementById('previewMeta');
+    const previewDesc  = document.getElementById('previewDesc');
+
+    const addBtn   = document.getElementById('addBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const gallery  = document.getElementById('gallery');
+
+    let currentImageURL = '';
+
+    /* ----- 미리보기 ----- */
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) { currentImageURL = ''; previewThumb.innerHTML = '<span class="hint">이미지 미리보기</span>'; return; }
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        currentImageURL = evt.target.result; // dataURL 저장
+        previewThumb.innerHTML = `<img src="${currentImageURL}" alt="미리보기 이미지">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function updatePreview(){
+      const title = titleInput.value.trim() || '제목(링크)';
+      const link  = linkInput.value.trim();
+      previewTitle.innerHTML = link ? `<a href="${escapeAttr(link)}" target="_blank" rel="noopener">${escapeHtml(title)}</a>` : escapeHtml(title);
+      previewMeta.textContent = link ? '제목이 링크로 연결됩니다.' : '링크를 입력하면 제목이 링크로 표시됩니다.';
+      previewDesc.textContent = descInput.value.trim() || '설명 미리보기';
+    }
+    titleInput.addEventListener('input', updatePreview);
+    linkInput.addEventListener('input', updatePreview);
+    descInput.addEventListener('input', updatePreview);
+    updatePreview();
+
+    /* ----- 카드 렌더링 & 직렬화 ----- */
+    function cardToData(card){
+      const img = card.querySelector('.thumb img');
+      const h3  = card.querySelector('h3');
+      const a   = h3 ? h3.querySelector('a') : null;
+      const title = a ? a.textContent.trim() : (h3?.textContent.trim() || '');
+      const link  = a ? a.getAttribute('href') : '';
+      const desc  = card.querySelector('.desc')?.textContent || '';
+      const imgSrc = img?.src || '';
+      return { title, link, desc, imgSrc };
+    }
+
+    function serializeGallery(){
+      const items = [...gallery.querySelectorAll('.item')];
+      return items.map(cardToData);
+    }
+
+    function renderCard({title, link, desc, imgSrc}, prepend=true){
+      const article = document.createElement('article');
+      article.className = 'item';
+      article.innerHTML = `
+        <div class="thumb"><img src="${imgSrc}" alt="${escapeAttr(title)} 이미지"></div>
+        <div class="content">
+          <h3>${link ? `<a href="${escapeAttr(link)}" target="_blank" rel="noopener">${escapeHtml(title)}</a>` : escapeHtml(title)}</h3>
+          <p class="desc">${escapeHtml(desc || '')}</p>
+          <div class="item-actions">
+            <button class="btn secondary" data-action="edit">수정</button>
+            <button class="btn danger" data-action="delete">삭제</button>
+            <span class="muted">저장됨</span>
+          </div>
+        </div>
+      `;
+      if (prepend) gallery.prepend(article); else gallery.append(article);
+      return article;
+    }
+
+    function renderFromData(arr){
+      gallery.innerHTML = '';
+      arr.forEach(d => renderCard(d, false));
+    }
+
+    /* ----- 저장/복원 ----- */
+    function saveToStorage(){
+      try{
+        const data = serializeGallery();
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+      }catch(err){
+        console.warn('저장 실패(용량 초과 가능):', err);
+        alert('저장에 실패했습니다. 이미지 용량을 줄이거나 일부 카드를 삭제해 주세요.');
+      }
+    }
+    function loadFromStorage(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) renderFromData(data);
+      }catch(err){
+        console.warn('불러오기 실패:', err);
+      }
+    }
+    function persistSoon(){ clearTimeout(persistSoon._t); persistSoon._t = setTimeout(saveToStorage, 200); }
+
+    /* ----- 추가/초기화 ----- */
+    addBtn.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const link  = linkInput.value.trim();
+      const desc  = descInput.value.trim();
+
+      if (!currentImageURL){ alert('이미지를 선택하세요.'); return; }
+      if (!title){ alert('제목을 입력하세요.'); return; }
+
+      renderCard({ title, link, desc, imgSrc: currentImageURL });
+      resetForm();
+      persistSoon();
+    });
+
+    function resetForm(){
+      imageInput.value = ''; titleInput.value = ''; linkInput.value = ''; descInput.value = '';
+      currentImageURL = '';
+      previewThumb.innerHTML = '<span class="hint">이미지 미리보기</span>';
+      updatePreview();
+    }
+    resetBtn.addEventListener('click', resetForm);
+
+    /* ----- 갤러리: 수정/삭제 ----- */
+    gallery.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      const card = e.target.closest('.item'); if (!card) return;
+      const action = btn.dataset.action;
+
+      if (action === 'delete'){
+        if (confirm('이 카드를 삭제할까요?')){ card.remove(); persistSoon(); }
+        return;
+      }
+      if (action === 'edit'){
+        enterEditMode(card);
+        return;
+      }
+      if (action === 'save'){ saveEdit(card); persistSoon(); return; }
+      if (action === 'cancel'){ cancelEdit(card); return; }
+    });
+
+    function getCardSnapshot(card){ return cardToData(card); }
+
+    function enterEditMode(card){
+      if (card.dataset.editing === 'true') return;
+      card.dataset.editing = 'true';
+      card._backup = getCardSnapshot(card);
+
+      const content = card.querySelector('.content');
+      const { title, link, desc } = card._backup;
+
+      content.innerHTML = `
+        <div class="edit-form">
+          <div class="grid">
+            <input type="text" class="ef-title" placeholder="제목" value="${escapeHtml(title)}" />
+            <input type="url" class="ef-link" placeholder="제목 링크(옵션)" value="${escapeHtml(link)}" />
+          </div>
+          <textarea class="ef-desc" placeholder="설명">${escapeHtml(desc)}</textarea>
+          <div>
+            <label class="hint">이미지 교체(옵션)</label>
+            <input type="file" class="ef-image" accept="image/*" />
+          </div>
+          <div class="item-actions">
+            <button class="btn" data-action="save">저장</button>
+            <button class="btn secondary" data-action="cancel">취소</button>
+          </div>
+        </div>
+      `;
+
+      const imgInput = content.querySelector('.ef-image');
+      imgInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const newSrc = evt.target.result;
+          const imgEl = card.querySelector('.thumb img');
+          imgEl.src = newSrc; // 미리보기 즉시 반영
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function saveEdit(card){
+      const t = card.querySelector('.ef-title')?.value.trim() || '';
+      const l = card.querySelector('.ef-link')?.value.trim() || '';
+      const d = card.querySelector('.ef-desc')?.value.trim() || '';
+      if (!t){ alert('제목을 입력하세요.'); return; }
+
+      const imgSrc = card.querySelector('.thumb img')?.src || '';
+      const content = card.querySelector('.content');
+      content.innerHTML = `
+        <h3>${l ? `<a href="${escapeAttr(l)}" target="_blank" rel="noopener">${escapeHtml(t)}</a>` : escapeHtml(t)}</h3>
+        <p class="desc">${escapeHtml(d)}</p>
+        <div class="item-actions">
+          <button class="btn secondary" data-action="edit">수정</button>
+          <button class="btn danger" data-action="delete">삭제</button>
+          <span class="muted">수정됨</span>
+        </div>
+      `;
+      card.dataset.editing = 'false';
+    }
+
+    function cancelEdit(card){
+      const backup = card._backup || getCardSnapshot(card);
+      const imgEl = card.querySelector('.thumb img');
+      if (imgEl && backup.imgSrc) imgEl.src = backup.imgSrc; // 이미지 복원
+      const content = card.querySelector('.content');
+      content.innerHTML = `
+        <h3>${backup.link ? `<a href="${escapeAttr(backup.link)}" target="_blank" rel="noopener">${escapeHtml(backup.title)}</a>` : escapeHtml(backup.title)}</h3>
+        <p class="desc">${escapeHtml(backup.desc)}</p>
+        <div class="item-actions">
+          <button class="btn secondary" data-action="edit">수정</button>
+          <button class="btn danger" data-action="delete">삭제</button>
+          <span class="muted">편집 취소</span>
+        </div>
+      `;
+      card.dataset.editing = 'false';
+      delete card._backup;
+    }
+
+    /* ----- 유틸리티 ----- */
+    function escapeHtml(str){ return (str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    function escapeAttr(str){ return (str || '').replace(/"/g, '&quot;'); }
+
+    /* 시작: 저장된 데이터 복원 */
+    loadFromStorage();
+  </script>
+</body>
+</html>
